@@ -1,0 +1,154 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>파라오 코드 - 솔로 모드</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #fdf6e3; padding: 20px; }
+    h1 { text-align: center; color: #c19a6b; }
+    .section { text-align: center; margin: 20px 0; }
+    button { padding: 10px 20px; font-size: 16px; }
+    input[type="text"] { font-size: 16px; padding: 5px; width: 300px; }
+    .tile {
+      display: inline-block; width: 80px; height: 80px; margin: 5px;
+      line-height: 80px; font-size: 24px; font-weight: bold;
+      border-radius: 8px; color: white;
+    }
+    .yellow { background: #f1c40f; }
+    .blue { background: #3498db; }
+    .red { background: #e74c3c; }
+    .black { background: #2c3e50; }
+    .score { font-size: 20px; margin-top: 10px; }
+    .legend-item { display: inline-block; margin: 0 10px; font-size: 16px; }
+    .legend-color { display: inline-block; width: 15px; height: 15px; border-radius: 3px; vertical-align: middle; margin-right: 5px; }
+    .instructions {
+      background: #fffaf0;
+      border: 1px solid #e0dccc;
+      padding: 15px;
+      border-radius: 10px;
+      max-width: 700px;
+      margin: 0 auto 20px;
+      font-size: 16px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎲 파라오 코드 - 솔로 모드 🎲</h1>
+
+  <div class="instructions">
+    <strong>게임 방법:</strong><br>
+    1. "주사위 굴리기" 버튼을 눌러 3개의 주사위를 굴립니다.<br>
+    2. 주사위에서 나온 숫자 3개 중 2개 이상을 사용하여 사칙연산 수식을 만듭니다.<br>
+    3. 수식 결과가 화면의 타일 숫자 중 하나와 정확히 일치하면 해당 난이도에 따라 점수를 획득합니다.<br>
+    4. 수식은 괄호를 사용해도 되며, 숫자는 한 번씩만 사용할 수 있습니다.<br>
+    5. 일치하는 타일이 없거나 수식이 틀리면 -1점 감점됩니다.<br>
+    6. 가능한 높은 점수를 목표로 도전해보세요!
+  </div>
+
+  <div class="section legend">
+    <div class="legend-item"><span class="legend-color yellow"></span>노랑 타일 = 1점</div>
+    <div class="legend-item"><span class="legend-color blue"></span>파랑 타일 = 2점</div>
+    <div class="legend-item"><span class="legend-color red"></span>빨강 타일 = 3점</div>
+    <div class="legend-item"><span class="legend-color black"></span>검정 타일 = 4점</div>
+  </div>
+
+  <div class="section dice">
+    <button onclick="rollDice()">🎲 주사위 굴리기</button>
+    <div id="diceResult" style="font-size: 28px; font-weight: bold;">주사위 결과: -</div>
+  </div>
+
+  <div class="section tiles" id="tileContainer">
+    <!-- 타일 표시 영역 -->
+  </div>
+
+  <div class="section">
+    <input type="text" id="expression" placeholder="예: (5-2)*11">
+    <button onclick="submitAnswer()">수식 확인</button>
+  </div>
+
+  <div id="message" class="section" style="font-size: 18px;"></div>
+
+  <div class="section scoreboard">
+    <div class="score" id="scoreDisplay">점수: 0</div>
+  </div>
+
+  <script>
+    let dice = [];
+    let score = 0;
+    let tiles = [];
+
+    function rollDice() {
+      dice = [roll(8), roll(10), roll(12)];
+      document.getElementById("diceResult").innerText = "주사위 결과: " + dice.join(", ");
+      document.getElementById("message").innerText = "";
+      document.getElementById("expression").value = "";
+      generateTiles();
+    }
+
+    function roll(sides) {
+      return Math.floor(Math.random() * sides) + 1;
+    }
+
+    function generateTiles() {
+      const container = document.getElementById("tileContainer");
+      container.innerHTML = "";
+      tiles = [];
+      const difficulties = ["yellow", "blue", "red", "black"];
+      for (let i = 0; i < 8; i++) {
+        const value = Math.floor(Math.random() * 50) + 1;
+        const difficulty = difficulties[Math.floor(i / 2)];
+        const tile = { value, difficulty };
+        tiles.push(tile);
+        const div = document.createElement("div");
+        div.className = `tile ${difficulty}`;
+        div.innerText = value;
+        div.setAttribute("data-value", value);
+        container.appendChild(div);
+      }
+    }
+
+    function submitAnswer() {
+      const expr = document.getElementById("expression").value;
+      if (!expr) {
+        alert("수식을 입력해주세요!");
+        return;
+      }
+
+      try {
+        const usedNumbers = dice.map(String);
+        const exprUsed = expr.match(/\d+/g) || [];
+        const isValid = exprUsed.every(num => usedNumbers.includes(num));
+
+        if (!isValid) {
+          document.getElementById("message").innerText = "❌ 주사위 숫자만 사용해야 해요!";
+          return;
+        }
+
+        const result = eval(expr);
+        const match = tiles.find(t => t.value === result);
+
+        if (match) {
+          const bonus = { yellow: 1, blue: 2, red: 3, black: 4 }[match.difficulty];
+          score += bonus;
+          document.getElementById("message").innerText = `✅ ${result} 일치! +${bonus}점`;
+        } else {
+          score -= 1;
+          document.getElementById("message").innerText = `❌ 일치하는 타일 없음. -1점`;
+        }
+
+        updateScore();
+      } catch {
+        document.getElementById("message").innerText = "❌ 잘못된 수식입니다.";
+      }
+    }
+
+    function updateScore() {
+      document.getElementById("scoreDisplay").innerText = `점수: ${score}`;
+    }
+
+    rollDice(); // 시작 시 자동 주사위 굴림
+  </script>
+</body>
+</html>
